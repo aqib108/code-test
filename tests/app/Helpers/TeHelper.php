@@ -13,8 +13,7 @@ class TeHelper
 {
     public static function fetchLanguageFromJobId($id)
     {
-        $language = Language::findOrFail($id);
-        return $language1 = $language->language;
+        return Language::findOrFail($id)->value('language');
     }
 
     public static function getUsermeta($user_id, $key = false)
@@ -32,12 +31,8 @@ class TeHelper
 
     public static function convertJobIdsInObjs($jobs_ids)
     {
-
-        $jobs = array();
-        foreach ($jobs_ids as $job_obj) {
-            $jobs[] = Job::findOrFail($job_obj->id);
-        }
-        return $jobs;
+        $ids = $jobs_ids->pluck('id');
+        return Job::find($ids);
     }
 
     public static function willExpireAt($due_time, $created_at)
@@ -47,17 +42,13 @@ class TeHelper
 
         $difference = $due_time->diffInHours($created_at);
 
-
-        if($difference <= 90)
-            $time = $due_time;
-        elseif ($difference <= 24) {
-            $time = $created_at->addMinutes(90);
-        } elseif ($difference > 24 && $difference <= 72) {
-            $time = $created_at->addHours(16);
-        } else {
-            $time = $due_time->subHours(48);
-        }
-
+        $time = match ($difference) {
+            $difference<=90 => $due_time,
+            $difference <= 24 =>  $created_at->addMinutes(90),
+            $difference > 24 && $difference <= 72 => $created_at->addMinutes(16),
+            default =>  $due_time->subHours(48),
+        };
+       
         return $time->format('Y-m-d H:i:s');
 
     }
